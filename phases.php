@@ -12,21 +12,17 @@ if (!$conn) {
 } 
 echo 'Connected successfully'; 
 
-//mysql_select_db(modeloutput); 
+$text = 'SELECT PhaseID.PhaseID FROM PhaseID GROUP BY PhaseID.PhaseID;';
 
-
- $result = mysqli_query($conn,"Select * from ColNames;") or die(mysqli_error()); 
+ $result = mysqli_query($conn,$text) or die(mysqli_error()); 
 
 $row = mysqli_fetch_array( $result );
 
+echo "<select name='phaseDrop'>";
  while($row = mysqli_fetch_array($result)) {
-  echo "<select name='phaseDrop'>";
- while($row = mysqli_fetch_array($result)) {
-    echo "<option value='`" . $row['Name'] . "`'>" . $row['Name'] . "</option>";
+    echo "<option value='`" . $row['PhaseID'] . "`'>" . $row['PhaseID'] . "</option>";
 }
 echo "</select>";	 
- }
-
 
 mysqli_close($conn);
 ?>

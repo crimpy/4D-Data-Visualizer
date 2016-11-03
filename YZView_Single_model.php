@@ -6,7 +6,7 @@
 <?php
 // Create connection
 
-$conn = mysqli_connect('packertestcom.fatcowmysql.com', 'phpclient', '0r0g3n', 'modeloutput'); 
+$conn = mysqli_connect('packertestcom.fatcowmysql.com', 'dbuser', 'hlove123', 'model');  
 if (!$conn) { 
     die('Could not connect: ' . mysqli_error()); 
 } 
