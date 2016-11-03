@@ -1,6 +1,8 @@
 # 4D-Data-Visualizer
 January 8, 2015
 
+Demo of working version is here: http://packertest.com/3DVis.html 
+
 This is a JavaScript application that I developed to visualize 4D data (3D data with time). 
 It was designedin particular to visualize data from a gold heap leach optimization program that runs on GoldSim.  The data outputs from GoldSim in Excel format.  I tried to preserve the GoldSim format for each data type to make it easier to transfer to MySQL. 
 
@@ -11,3 +13,5 @@ Other past versions were 'standalone' local machine versions that used the Acces
 Currently the model maximum dimensions are 36x41x15 but this can be adjusted in further versions.
 
 I'm open to suggestions on how to make the application more efficient. Please let me know! 
+
+11/3/2016: made some tweaks to the application for some better functionality and performance.
