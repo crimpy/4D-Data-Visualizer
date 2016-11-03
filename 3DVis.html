@@ -1,0 +1,657 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd ">
+ <html xmlns="http://www.w3.org/1999/xhtml">
+ 
+<meta http-equiv='Content-Type' content='text/javascript; charset=utf-8' />
+<head>
+<style>
+
+</style>
+
+
+<meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
+<title>Heap Leach Optimization Visualization System</title>
+<meta charset="utf-8" />
+
+<link rel="stylesheet" href="http://packertest.com/jquery-ui.css" />
+<link rel="stylesheet" href="http://packertest.com/HLOVE.css" />
+<script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+<script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
+<link rel="shortcut icon" href="http://packertest.com/3Dvis.ico" ></link> 
+</head>
+
+<script>
+
+$(document).ready(function(){
+
+var temp = $('#dropDownDest :selected').val(), phaseVal; 
+var DBVal=$('#Database :selected').val(), DBval =$('#Database :selected').val();;
+var str = 10, fac=100;
+var step= "`Oct-07`";
+var TimeTable = 0;
+var AuVal, moistVal, ScaleMax = 100;
+var SCALES =  [ {name:'Cnull',limit:-99}, {name: 'C20', limit:  .1}, {name: 'C19', limit:0.5}, {name: 'C18', limit:1}, {name: 'C17', limit:5}, {name: 'C16', limit: 8}, {name: 'C15', limit: 12}, {name: 'C14', limit: 16}, {name: 'C13', limit: 20}, {name: 'C12', limit: 30}, {name: 'C11', limit: 40}, {name: 'C10', limit: 50}, {name:  'C9', limit: 60}, {name:  'C8', limit: 70}, {name:  'C7', limit: 80}, {name:  'C6', limit: 90}, {name:  'C5', limit: 100}, {name:  'C4', limit: 200}, {name:  'C3', limit: 300}, {name:  'C2', limit: 400}, {name:  'C1', limit: 600} ];
+var newSCALES, incr;
+//shortcut notiations for tables
+var $tab = $('#tab');var $tabR = $('#tabR');var $tabC = $('#tabC');var $scaleTab = $('#scaleTab'); $temp=$('#temp');
+//initial values for the tables- can get numbers from the DB
+var TABLE_COUNT =15,    ROW_COUNT =41,    COL_COUNT =36;
+var scaleTab='<table id="scaleTable"><tbody><tr><th>Legend</th><td colspan="20"></td><tr><th rowspan="2">Au Recovery (% of total placed)</th><td>1</td><td>5</td><td>8</td><td>12</td><td>16</td><td>20</td><td>22</td><td>26</td><td>34</td><td>37</td><td>41</td><td>45</td><td>49</td><td>53</td><td>57</td><td>61</td><td>64</td><td>68</td><td>72</td><td>78</td></tr><tr><td colspan="20"></td></tr></tbody></table>';
+
+var loc1 = '3D_out.html?t=' + new Date().getTime();var loc2 = 'HeapVoxel4a.html';
+$('#heapID').click(function() {$('#myFrame').attr('src', loc1);});
+$('#feature').click(function() {$('#myFrame').attr('src', loc2);});
+
+$('#howTo').text('Choose a time step from the drop-down. Browse through the layers and cross sections.  To make a 3D representation of the 2D data, click on the "Generate 3D" button.  The button will remain blue during calculation.  Once the button returns to gray, the 3D representation will appear in the box below.  Click inside the box below the button to explore the data in 3D.');
+
+initiateData()
+
+function initiateData()
+{
+GetTimes(); //gets the column headers from the DB which represents the time steps
+GetPhases();  //gets the unique values for the phases from the DB
+checkDB();
+$('#amount1').val(18);  //amount 1 is the column
+$('#amount2').val(21);  //amount 2 is the row
+$('#amount3').val(1);  // amount 3 is the lift value
+updateTable1(1);  //gets initial table values for lift 1
+updateTable2(21);  //tabC values (top table)
+updateTable3(18);	//tabR values (lower table)
+//set initial values of the slider bars
+instrumentHSlider( $('#hSlider' ), $('#amount1'));  //column output
+instrumentV1Slider($('#vSlider1'), $('#amount2'));  //row output
+instrumentV2Slider($('#vSlider2'), $('#amount3'));  //table layer
+instrumentV2Slider($('#vSlider2a'), $('#amount3'));  //table layer
+//set the initial slider values	
+$("#vSlider1").find("a").text('21');
+$("#hSlider").find("a").text('18');
+$("#vSlider2").find("a").text('1');
+$("#vSlider2a").find("a").text('1');
+updateHighlightedCell();
+}
+
+function updateDB()
+{
+temp  = $('#dropDownDest').val();
+DBVal = $('#Database').val();
+updateTable1($('#amount3').val());
+updateTable3($('#amount1').val()); //tabR
+updateTable2($('#amount2').val()); //tabC
+updateHighlightedCell();
+}
+
+function checkDB()
+{
+	if(DBVal=='`dat`')
+	// TimeTable = 0 for all tables that contain time series data with the same time step column names
+		{TimeTable = 0;
+		}
+		else if(DBVal=='`Moisture`')
+		{TimeTable = 0;
+		}
+		else if(DBVal=='`Gold`')
+		{TimeTable = 0;
+		}  
+		//if the TimeTable=1 this means that there is oonly one 'time step' in the data. Column values must equal the table name
+		else if(DBVal=='`Inventory`')
+		{TimeTable = 1;
+		}
+		else if(DBVal=='`Solution`')
+		{TimeTable = 1;
+		}
+		//else if(DBVal=='`ColumnElev`')
+		//{TimeTable = 1;
+		//}
+		else if(DBVal=='`CellThickness`')
+		{TimeTable = 1;
+		}
+		else if(DBVal=='`LoadedThickness`')
+		{TimeTable = 1;
+		}
+		//else if(DBVal=='`LinerElevation`')
+		//{TimeTable = 1;
+		//}
+		else if(DBVal=='`KPrime`')
+		{TimeTable = 1;
+		}
+		else if(DBVal=='`PhaseID`')
+		{TimeTable = 1;
+		}
+}
+
+$('#Database').change(function(e){  //changes the time step to display using the dropdown
+	updateDB();
+}).change();
+
+$('#dropDownDest').change(function(e){  //updates the tables to pull from the desired database using the dropdown
+	updateDB();
+}).change();
+
+function GetPhases()
+{
+	if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+				document.getElementById("phaseDrop").innerHTML = xmlhttp.responseText;
+            }
+        }
+		
+        xmlhttp.open("GET","phases_model.php", false);		
+		xmlhttp.send();
+
+}
+
+function GetTimes()  //this gets the "time values" for any time series data
+{
+	if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("dropDownDest").innerHTML = xmlhttp.responseText;
+            }
+        }
+		xmlhttp.open("GET","GetColNames_model.php", false);
+		
+		xmlhttp.send();
+
+		$("#dropDownDest option").slice(0, 5).remove();  //removes the first 7 entries that are not time steps
+}
+
+function GetTable1(value)  //main table values
+{	
+if(TimeTable == 0)
+	{
+
+     if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tab").innerHTML = xmlhttp.responseText;
+            }
+        }
+
+        xmlhttp.open("GET","PlanView_model.php?DBVal=" + DBVal +"&step=" + temp + "&lift=" + value, false);
+		
+		xmlhttp.send();
+	
+	}
+if(TimeTable == 1)
+	{
+		 if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tab").innerHTML = xmlhttp.responseText;
+            }
+        }
+
+        xmlhttp.open("GET","PlanView_Single_model.php?DBVal=" + DBVal +"&step=" + DBVal + "&lift=" + value, false);
+		
+		xmlhttp.send();
+		}
+
+}
+
+function GetTable2(value)
+{
+if(TimeTable == 0)
+	{		
+	  if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tabC").innerHTML = xmlhttp.responseText;
+            }
+        }
+		                  
+        xmlhttp.open("GET","XZView_model.php?DBVal=" + DBVal +"&step=" + temp + "&lift=" + value, false);
+		
+		xmlhttp.send();
+		}
+		
+if(TimeTable == 1)
+	{
+	if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tabC").innerHTML = xmlhttp.responseText;
+            }
+        }
+
+        xmlhttp.open("GET","XZView_Single_model.php?DBVal=" + DBVal +"&step=" + DBVal + "&lift=" + value, false);
+		
+		xmlhttp.send();
+		}
+}
+
+function GetTable3(value)
+{	
+if(TimeTable == 0)
+	{		
+	 if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tabR").innerHTML = xmlhttp.responseText;
+            }
+        }
+                  
+        xmlhttp.open("GET","YZView_model.php?DBVal=" + DBVal +"&step=" + temp + "&lift=" + value, false);
+		
+		xmlhttp.send();
+	}
+	
+if(TimeTable == 1)
+	{
+	if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("tabR").innerHTML = xmlhttp.responseText;
+            }
+        }
+
+        xmlhttp.open("GET","YZView_Single_model.php?DBVal=" + DBVal +"&step=" + DBVal + "&lift=" + value, false);
+		
+		xmlhttp.send();
+		}
+}
+
+function GetCellInfo(Col, Row, Lay) //This gets the information from the DB for each cell
+{	
+
+if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("info").innerHTML = xmlhttp.responseText;
+            }
+        }
+		
+        temp = $('#dropDownDest :selected').val();
+        xmlhttp.open("GET","CellValues_model.php?temp=" + temp + "&Row=" + Row +"&Lay=" + Lay + "&Col=" + Col, false);
+		
+		xmlhttp.send();
+}
+
+var tdEnlargedCssMap = {    border: 'none',    'font-size': '18px', 'color': 'yellow' }  //this goes along with the function below
+
+$('body').on('mouseenter', 'table td', function() {
+		$('#cellVal').append(
+ 		$(this).clone().addClass('cloned-element'));
+		})
+		
+$('body').on('mouseleave', 'table td', function(){
+		$('#cellVal').find('.cloned-element').remove();
+ 		});
+  
+function getTableInfo(){
+	var tr = $(this).parent()
+	for (var i = 0; i < tr.children().length; i++) {
+		if (tr.children().get(i) == this) {
+			var column = i;
+			break;
+			}
+		}
+	var tbody = tr.parent();
+	for (var j = 0; j < tbody.children().length; j++) {
+		if (tbody.children().get(j) == tr.get(0)) {
+			var row = j;
+			break;
+			}
+		}
+}
+
+$('body')  //displays the information about the cell
+.on('click','#tab td', function(){
+getTableInfo();
+var iCol =$(this).closest('tr td').prevAll('tr td').length;
+var iRow = $(this).closest('tr').prevAll('tr').length;
+var iLay =  parseInt($('#amount3').val(), 10);
+var tdCol = $(this).closest('tr td').prevAll('tr td').css('border');
+var tdClass = $(this).siblings('tr td').attr('class');
+realRow =41-iRow-1;
+realCol = iCol+1;
+GetCellInfo(realCol, realRow, iLay);
+$('#amount1').val(realCol);
+$('#amount2').val(realRow);
+updateTable3(realCol);
+updateTable2(realRow);
+updateHighlightedCell();
+$('#vSlider1').slider({ animate:true,value: realRow})
+$('#hSlider').slider({  animate:true,value: realCol});
+$("#vSlider1").find("a").text(realRow);
+$("#hSlider").find("a").text(realCol);
+})
+
+$('body')
+.on('click','#tabR td', function(){  
+getTableInfo();
+var iCol =$(this).closest('tr td').prevAll('tr td').length;
+var iLay = $(this).closest('tr').prevAll('tr').length;
+var iRow =  parseInt($('#amount1').val(), 10);
+realRow =41-iCol;
+realLay =15-iLay;
+GetCellInfo(iRow, realRow,realLay);
+$('#amount3').val(realLay);
+$('#amount2').val(realRow);
+updateTable1(realLay);
+updateTable2(realRow);
+updateHighlightedCell();
+$('#vSlider1').slider({ animate:true,value: realRow});
+$('#vSlider2').slider({ animate:true,value: realLay});
+$('#vSlider2a').slider({animate:true,value: realLay});
+$("#vSlider1").find("a").text(realRow);
+$("#vSlider2").find("a").text(realLay);
+$("#vSlider2a").find("a").text(realLay);    
+})
+
+$('body')
+.on('click','#tabC td', function(){ 
+getTableInfo(); 
+var iCol =$(this).closest('tr td').prevAll('tr td').length;
+var iLay = $(this).closest('tr').prevAll('tr').length;
+var iRow =  parseInt($('#amount2').val(), 10);
+realCol = iCol+1;
+realLay = 15-iLay;
+GetCellInfo(realCol, iRow, realLay);
+$('#amount3').val(realLay);
+$('#amount1').val(realCol);
+updateTable1(realLay);
+updateTable3(realCol);
+updateHighlightedCell();
+$('#hSlider').slider({  animate:true,value: realCol});
+$('#vSlider2').slider({ animate:true,value: realLay});
+$('#vSlider2a').slider({animate:true,value: realLay});
+$("#hSlider").find("a").text(realCol);
+$("#vSlider2").find("a").text(realLay);
+$("#vSlider2a").find("a").text(realLay);  
+})
+
+function reverseSlider(val, max) { return (max - val );}
+
+function updateTable1(Sval) {  //main plan view table
+	checkDB();
+	GetTable1(Sval);
+		$tab.children().find('td').each(function() {
+		var $td = $(this),score = parseInt($td .text(), 10);
+ 		$.each(SCALES, function(i, scale) {
+			if (score <= scale.limit) {
+			$td.addClass(scale.name);
+			return false;
+			}
+ 		});
+	});
+}
+
+function updateTable2(Sval) {  //tabC (upper table) colum section 41 in length
+	checkDB();
+	GetTable2(Sval);
+	$tabC.children().find('td').each(function() {
+		var $td = $(this),score = parseInt($td .text(), 10);
+		$.each(SCALES, function(i, scale) {
+			if (score <= scale.limit) {
+			$td.addClass(scale.name);
+			return false;
+			}
+		});
+	}); 
+}
+
+function updateTable3(Sval) {  //tabR (lower table) row section 36 in length
+	checkDB();
+	GetTable3(Sval);
+	$tabR.children().find('td').each(function() {
+		var $td = $(this), score = parseInt($td .text(), 10);
+		$.each(SCALES, function(i, scale) {
+			if (score <= scale.limit) {
+			$td.addClass(scale.name);
+			return false;
+			}        
+		});    
+	}); 
+} 
+
+function updateHighlightedCell() {  //this updates the crosshairs on all three tables 
+var iCol =      parseInt($('#amount1').val(), 10);
+var iRow =    - parseInt($('#amount2').val(), 10);
+var iLayer =  - parseInt($('#amount3').val(), 10);
+var $table = $tab.children(), $tableR= $tabR.children(), $tableC= $tabC.children();
+
+$table.find('td').removeClass('highlighted');//crosshair on main table
+$table.find('tr').find('td:eq(' + (iCol-1) + ')').addClass('highlighted');
+$table.find('tr:eq(' + iRow + ')').find('td').addClass('highlighted');
+
+$tableR.find('td').removeClass('highlighted');//crosshair on row table
+$tableR.find('tr').find('td:eq(' + (iRow) + ')').addClass('highlighted');
+$tableR.find('tr:eq(' + (iLayer) + ')').find('td').addClass('highlighted');
+
+$tableC.find('td').removeClass('highlighted');//crosshair on column table
+$tableC.find('tr').find('td:eq(' + (iCol-1) + ')').addClass('highlighted');
+$tableC.find('tr:eq(' + (iLayer) + ')').find('td').addClass('highlighted');
+}
+
+function instrumentHSlider($slider, $boundInput) {
+	var sliderH = $slider.slider({ orientation: 'horizontal',range:'min', min: 1, max: COL_COUNT, value: 18, animate:1000, slide: function (event, ui) {
+		$boundInput.val(ui.value);
+		posVal=$slider.slider('value');  //gets number for row or column
+		updateTable3(ui.value);  //updates the info in the tabR div
+ 		updateHighlightedCell();
+		$(this).find('a').text(ui.value);
+		}
+	});
+	$boundInput.val($slider.slider('value'));
+}
+
+function instrumentV1Slider($slider, $boundInput) {
+	var sliderV1 = $slider.slider({ orientation: 'vertical',range: 'max', min: 1, max: ROW_COUNT, value: 21,animate:1000,slide: function (event, ui) {
+		$boundInput.val(ui.value);
+    	posVal=$slider.slider('value');  //gets number for row or column
+		updateTable2(ui.value);  //updates the info in the tabC div
+		updateHighlightedCell();
+		$(this).find('a').text(ui.value);
+		}
+	})
+	$boundInput.val($slider.slider('value'), ROW_COUNT);
+}
+
+function instrumentV2Slider($slider, $boundInput) {
+	var posVal;
+ 	var sliderV2= $slider.slider({ orientation: 'vertical',range: 'max', min: 1, max: TABLE_COUNT, value: 1,    animate:1000, slide: function (event, ui) {
+ 		$boundInput.val(ui.value);
+		posVal=$slider.slider('value');
+		$('#vSlider2a').slider('option', 'value', ui.value);
+		$('#vSlider2').slider('option', 'value', ui.value); 
+		updateTable1(ui.value);
+		updateHighlightedCell();
+		$("#vSlider2").find("a").text(ui.value);
+        $("#vSlider2a").find("a").text(ui.value);		}
+    });
+	$boundInput.val($slider.slider('value'), TABLE_COUNT);
+
+}
+
+$scaleTab.children().find('td').each(function() {
+	var $td = $(this),  score = parseInt($td .text(), 10);
+	$.each(SCALES, function(i, scale) {
+ 		if (score <= scale.limit) {
+ 		$td.addClass(scale.name);
+		return false;
+		} 
+	});
+});
+
+
+$('#Gen3D').on('click', function (e) {  //generates the 3D representation in the iFrame using Heapvoxel5Ts.html
+	e.preventDefault();
+	//this makes the arrays for 3D and saves as local storage
+    
+
+	checkDB(); 
+	if(TimeTable == 0)
+	{
+	 if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                document.getElementById("myFrame").innerHTML = "Please Wait";
+                //$('#myFrame').load("Make3D_model.php?DBVal=" + DBVal +"&step=" + step +"&fac=" + fac);
+                // document.getElementById("myFrame").innerHTML = xmlhttp.responseText;
+                //$('#myFrame').attr('src', loc1);
+                document.getElementById("myFrame").innerHTML='<object type="text/html" height="100%" width="100%" data="3D_out.html" ></object>';
+            }
+        }
+		step = $('#dropDownDest :selected').val();
+        DBVal = $('#Database').val();
+		fac = 100;
+        xmlhttp.open("GET","Make3D_model.php?DBVal=" + DBVal +"&step=" + step +"&fac=" + fac , false);
+
+		xmlhttp.send();
+	}
+else if(TimeTable == 1)
+	{
+	if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                $('#myFrame').attr('src', loc1);
+            }
+        }
+		
+        DBVal = $('#Database').val();
+        fac = 1;
+        xmlhttp.open("GET","Make3D_model.php?DBVal=" + DBVal +"&step=" + DBVal +"&fac=" + fac , false);
+
+        document.getElementById("myFrame").innerHTML = "Please Wait";
+		xmlhttp.send();
+	}
+	 
+	
+	
+});
+
+$('#ShowInfo').click(function(e){  
+	alert("3D-Vis 3D Data Visualization                                         This model depicts a Heap Leach Optimization Simulation.  This model is comprised of fabricated data for demonstration purposes.  This visualization shows a 3D data set that can be visualized with a variety of data types.  This visualization system helps examine complex 3D data sets more effectively by having the ability to cross reference cell positions with multiple data values. ")
+		
+	}); 
+
+});
+
+</script>
+<body>
+<div id="hSlider" style="width: 637px;">&nbsp;</div>
+<div id="vSlider1" style="height: 660px;">&nbsp;</div>
+<div id="vSlider2" style="height: 120px;">&nbsp;</div>
+<div id="vSlider2a" style="height: 120px;">&nbsp;</div>
+<div id="tab">&nbsp;</div>
+<div id="tabC" class="smGrid">&nbsp;</div>
+<div id="tabR" class="smGrid">&nbsp;</div>
+<div id="temp">&nbsp;</div>
+<div id="L3"><strong>Cell Data</strong></div>
+<div id="L4"><strong>Cell Value</strong></div>
+<div id="Hlabel">Column Cross Section</div>
+<div id="Vlabel">Row Cross Section</div>
+<p><button id="Gen3D">Generate 3D</button></p>
+<div id="info" style="height: 130px;"><center>click on a cell to view data</center></div>
+<div id="howTo">&nbsp;</div>
+<div id="scaleTab" style="width: 495px;">
+<table id="scaleTable">
+<tbody>
+<tr><th>Legend</th><th colspan="5">Col:</th><th colspan="2"><input id="amount1" type="text" maxlength="2" /></th><th colspan="2">Row:</th><th colspan="2"><input id="amount2" type="text"  maxlength="2"/></th><th colspan="3">Layer:</th><th colspan="1"><input id="amount3" type="text"  maxlength="2"/></th><th colspan="3">&nbsp;</th><th colspan="2" id="cellVal"></th></tr>
+<tr><th><select id="Database">
+<option value="&#96;dat&#96;">Au Recovery (% of total placed)</option>
+<option value="&#96;Moisture&#96;">Ore Gravimetric H2O Content (%)</option>
+<option value="&#96;Gold&#96;">Gold Content Residual</option>
+<option value="&#96;Inventory&#96;">Au Inventory (troy oz)</option>
+<option value="&#96;Solution&#96;">Solution to Ore Ratio</option>
+<option value="&#96;CellThickness&#96;">Actual Cell Thickness (ft)</option>
+<option value="&#96;LoadedThickness&#96;">Loaded Cell Thickness (ft)</option>
+<option value="&#96;KPrime&#96;">Au Extraction k' Value (x1000)</option>
+<option value="&#96;PhaseID&#96;">Phase ID Values</option>
+</select></th>
+<td>0.1</td>
+<td>1</td>
+<td>5</td>
+<td>8</td>
+<td>12</td>
+<td>16</td>
+<td>20</td>
+<td>22</td>
+<td>30</td>
+<td>40</td>
+<td>50</td>
+<td>60</td>
+<td>70</td>
+<td>80</td>
+<td>90</td>
+<td>100</td>
+<td>200</td>
+<td>300</td>
+<td>400</td>
+<td>500</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><div id="myFrame" width="300" height="150"></div> <textarea id="live1" style="width: 440px; height: 70px;"></textarea></p>
+<select id="dropDownDest"></select><select id="phaseDrop"></select>
+<p><button id="ShowInfo">About Model</button></p>
+</body>
+</html>
